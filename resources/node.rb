@@ -1,5 +1,7 @@
-# resources/node.rb
 #
+# Cookbook Name:: zookeeper
+# Resource:: node
+
 # Copyright 2013, Simple Finance Technology Corp.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,27 +16,77 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-actions(:create, :delete, :create_if_missing)
-default_action(:create)
+default_action :create
 
-attribute :path,        kind_of: String, name_attribute: true
-attribute :connect_str, kind_of: String, required: true
-attribute :data,        kind_of: String
+property :node_path,   kind_of: String, name_attribute: true
+property :connect_str, kind_of: String, required: true
+property :data,        kind_of: String
 
-attribute :auth_cert,   kind_of: String, default: nil
-attribute :auth_scheme, kind_of: String, default: 'digest'
+property :auth_cert,   kind_of: String, default: nil
+property :auth_scheme,                  default: 'digest'
 
-attribute :acl_digest,  kind_of: Hash
-attribute :acl_ip,      kind_of: Hash
-attribute :acl_sasl,    kind_of: Hash
-attribute :acl_world,   kind_of: Fixnum, default: Zk::PERM_ALL
+property :acl_digest,  kind_of: Hash,   default: {}
+property :acl_ip,      kind_of: Hash,   default: {}
+property :acl_sasl,    kind_of: Hash,   default: {}
+property :acl_world,   kind_of: Fixnum, default: Zk::PERM_ALL
 
-def initialize(name, run_context = nil)
-  super
+include Zk::Gem
 
-  # Initializes acl attributes default values
-  # We can't use `default` dsl because it'll share the hash reference
-  @acl_digest = {}
-  @acl_sasl = {}
-  @acl_ip = {}
+def load_current_value
+  result = zookeeper.get_acl path: node_path
+  current_value_does_not_exist! unless result[:stat].exists
+
+  current_resource.data zookeeper.get(path: new_resource.node_path)[:data]
+
+  result[:acl].each do |acl|
+    case acl[:id][:scheme]
+    when 'world'
+      current_resource.acl_world acl[:perms]
+    else
+      current_resource.send("acl_#{acl[:id][:scheme]}".to_sym)[acl[:id][:id]] = acl[:perms]
+    end
+  end
+end
+
+action :create_if_missing do
+  run_action :create unless current_resource
+end
+
+action :create do
+  converge_if_changed do
+    if current_resource
+      if current_resource.data != new_resource.data
+        converge_by "Updating #{node_path} node" do
+          result = zookeeper.set(path: new_resource.node_path, data: new_resource.data)[:rc]
+
+          raise "Failed with error code '#{result}' => (#{::Zk.error_message result})" unless result.zero?
+        end
+      end
+
+      if [
+        :acl_world,
+        :acl_digest,
+        :acl_ip,
+        :acl_sasl
+      ].any? { |s| current_resource.send(s) != new_resource.send(s) }
+        converge_by "Setting #{node_path} acls" do
+          result = zookeeper.set_acl(path: new_resource.node_path, acl: compile_acls)[:rc]
+
+          raise "Failed with error code '#{result}' => (#{::Zk.error_message result})" unless result.zero?
+        end
+      end
+    else
+      converge_by "Creating #{node_path} node" do
+        result = zookeeper.create(path: new_resource.node_path, data: new_resource.data, acl: compile_acls)[:rc]
+
+        raise "Failed with error code '#{result}' => (#{::Zk.error_message result})" unless result.zero?
+      end
+    end
+  end
+end
+
+action :delete do
+  converge_by "Removing #{node_path} node" do
+    zookeeper.delete path: node_path
+  end if current_resource
 end
