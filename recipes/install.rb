@@ -27,14 +27,13 @@ node.override['build-essential']['compile_time'] = true
 include_recipe 'build-essential::default'
 
 zookeeper node['zookeeper']['version'] do
-  user        node['zookeeper']['user']
+  username    node['zookeeper']['user']
   user_home   node['zookeeper']['user_home']
   mirror      node['zookeeper']['mirror']
   checksum    node['zookeeper']['checksum']
   install_dir node['zookeeper']['install_dir']
   log_dir     node['zookeeper']['log_dir']
   data_dir    node['zookeeper']['config']['dataDir']
-  action      :install
 end
 
 # Add optional Zookeeper environment vars
