@@ -24,13 +24,11 @@ property :user,                       default: 'zookeeper'
 property :config,    kind_of: Hash,                        required: true
 property :env_vars,  kind_of: Hash,   default: {}
 
-include Zk::Config
-
 action :render do
   file "#{conf_dir}/#{conf_file}" do
     owner   user
     group   user
-    content render_zk_config(config)
+    content properties_config(config)
   end
 
   # Add optional Zookeeper environment vars
