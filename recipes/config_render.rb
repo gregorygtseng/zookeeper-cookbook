@@ -21,5 +21,4 @@ zookeeper_config 'zookeeper config' do
          node['zookeeper']['conf_file']
   config node['zookeeper']['config']
   user   node['zookeeper']['user']
-  action :render
 end
