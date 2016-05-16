@@ -20,9 +20,9 @@ default_action :render
 
 property :conf_dir,  kind_of: String, name_attribute: true
 property :conf_file, kind_of: String,                      required: true
-property :user,                       default: 'zookeeper'
 property :config,    kind_of: Hash,                        required: true
 property :env_vars,  kind_of: Hash,   default: {}
+property :user,                       default: 'zookeeper'
 
 action :render do
   file "#{conf_dir}/#{conf_file}" do

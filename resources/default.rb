@@ -20,12 +20,12 @@ default_action :install
 
 property :version,     kind_of: String, name_attribute: true
 property :mirror,      kind_of: String, required: true
+property :checksum,    kind_of: String
 property :username,                     default: 'zookeeper'
 property :user_home,                    default: '/home/zookeeper'
 property :install_dir,                  default: '/opt/zookeeper'
 property :log_dir,                      default: '/var/log/zookeeper'
 property :data_dir,                     default: '/var/lib/zookeeper'
-property :checksum,    kind_of: String
 
 # Install Zookeeper
 action :install do
